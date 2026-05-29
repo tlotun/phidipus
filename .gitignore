@@ -1,1 +1,10 @@
+# Google OAuth secrets — NEVER commit
+client_secret_*.json
+*.secret.json
+.env
+
+# OS junk
 .DS_Store
+
+# Backup
+*.old.html.DS_Store
