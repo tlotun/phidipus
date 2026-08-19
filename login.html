@@ -518,7 +518,7 @@ body {
 <script>
 const I18N = {
   en: {
-    back: "back",
+    back: "choose product",
     eyebrow: "AUTHORIZED ACCESS ONLY",
     title1: "Sign in to access",
     title2: "the terminal.",
@@ -532,12 +532,12 @@ const I18N = {
     status_deny_glyph: "[ \u2717 DENIED ]",
     status_deny_title: "Account not authorized",
     status_deny_help: "This email is not on the allowlist. Contact the admin to request access.",
-    btn_back: "back to home",
+    btn_back: "back to Web3 / Stock",
     btn_retry: "try another account",
     placeholder_warning: "[ ! ] Google Client ID not configured. Edit constants in login.html.",
   },
   vi: {
-    back: "trang chủ",
+    back: "chọn sản phẩm",
     eyebrow: "CHỈ ACCESS ĐƯỢC ỦY QUYỀN",
     title1: "Đăng nhập để mở",
     title2: "terminal.",
@@ -551,12 +551,12 @@ const I18N = {
     status_deny_glyph: "[ \u2717 T\u1eea CH\u1ed0I ]",
     status_deny_title: "Tài khoản chưa được cho phép",
     status_deny_help: "Email này không nằm trong allowlist. Liên hệ admin để được thêm quyền truy cập.",
-    btn_back: "quay lại",
+    btn_back: "quay lại chọn Web3 / Stock",
     btn_retry: "thử account khác",
     placeholder_warning: "[ ! ] Chưa cấu hình Google Client ID. Edit constants trong login.html.",
   },
   zh: {
-    back: "返回",
+    back: "选择产品",
     eyebrow: "仅限授权访问",
     title1: "登录以访问",
     title2: "终端。",
@@ -570,12 +570,12 @@ const I18N = {
     status_deny_glyph: "[ \u2717 拒绝 ]",
     status_deny_title: "账号未获授权",
     status_deny_help: "此邮箱不在白名单中。请联系管理员申请访问权限。",
-    btn_back: "返回首页",
+    btn_back: "返回选择 Web3 / Stock",
     btn_retry: "尝试其他账号",
     placeholder_warning: "[ ! ] 未配置 Google Client ID。请在 login.html 中编辑常量。",
   },
   ja: {
-    back: "戻る",
+    back: "製品を選ぶ",
     eyebrow: "認証されたアクセスのみ",
     title1: "サインインして",
     title2: "ターミナルにアクセス。",
@@ -589,12 +589,12 @@ const I18N = {
     status_deny_glyph: "[ \u2717 拒否 ]",
     status_deny_title: "アカウントが認証されていません",
     status_deny_help: "このメールはホワイトリストにありません。管理者にアクセスをリクエストしてください。",
-    btn_back: "ホームに戻る",
+    btn_back: "Web3 / Stock を選び直す",
     btn_retry: "別のアカウントを試す",
     placeholder_warning: "[ ! ] Google Client ID が設定されていません。login.html の定数を編集してください。",
   },
   ko: {
-    back: "돌아가기",
+    back: "제품 선택",
     eyebrow: "인증된 접근 전용",
     title1: "로그인하여",
     title2: "터미널에 접근.",
@@ -608,7 +608,7 @@ const I18N = {
     status_deny_glyph: "[ \u2717 거부됨 ]",
     status_deny_title: "계정이 승인되지 않음",
     status_deny_help: "이 이메일은 화이트리스트에 없습니다. 관리자에게 접근을 요청하세요.",
-    btn_back: "홈으로",
+    btn_back: "Web3 / Stock 다시 선택",
     btn_retry: "다른 계정으로 시도",
     placeholder_warning: "[ ! ] Google Client ID가 구성되지 않았습니다. login.html의 상수를 편집하세요.",
   },
@@ -702,6 +702,26 @@ const GOOGLE_CLIENT_ID = '1003710503573-dqtnsjdubdurmd2kt19p97eghceislif.apps.go
 const APP_URL  = 'https://app.phidipus.com';
 // Backend verify token + check allowlist + set cookie phiên (cùng domain app).
 const AUTH_URL = APP_URL + '/api/auth/google';
+
+/* v9.33 — ĐƯỜNG QUAY LẠI.
+   Trước đây nút back trỏ "/" tức về phidipus.com — ai bị chặn ở đây là kẹt,
+   không có lối trở ra trang chọn Web3 / Stock. Giờ máy chủ gửi kèm:
+     ?back=<trang chọn Web3/Stock>   ?next=<chỗ người dùng định vào>
+   Chỉ nhận địa chỉ thuộc *.phidipus.com để không bị lợi dụng làm bàn đạp
+   chuyển hướng sang trang lạ. */
+function _safeUrl(raw, fallback) {
+  if (!raw) return fallback;          // thiếu tham số → new URL(null,…) ra ".../null"
+  try {
+    const u = new URL(raw, APP_URL);
+    if (u.protocol === 'https:' && /(^|\.)phidipus\.com$/i.test(u.hostname)) return u.href;
+  } catch (_) {}
+  return fallback;
+}
+const _qs      = new URLSearchParams(location.search);
+const BACK_URL = _safeUrl(_qs.get('back'), APP_URL + '/');
+const NEXT_URL = _safeUrl(_qs.get('next'), APP_URL + '/');
+// gắn cho nút back trên đầu trang
+document.querySelectorAll('a.back-link').forEach(function (a) { a.href = BACK_URL; });
 // ═════════════════════════════════════════════════════════════════════
 
 document.getElementById('year').textContent = new Date().getFullYear();
@@ -777,14 +797,14 @@ function showStatus(kind, email) {
     setTimeout(() => {
       // Backend đã verify + set cookie phiên (HttpOnly). Redirect SẠCH, không
       // nhét token vào URL nữa — an toàn hơn hẳn cách cũ.
-      window.location.href = APP_URL;
+      window.location.href = NEXT_URL;
     }, 1100);
   } else if (kind === 'deny') {
     glyph.textContent = window.__t('status_deny_glyph');
     title.textContent = window.__t('status_deny_title');
     help.textContent = window.__t('status_deny_help');
     actions.innerHTML =
-      '<a href="/" class="status-btn">' + window.__t('btn_back') + '</a>' +
+      '<a href="' + BACK_URL + '" class="status-btn">' + window.__t('btn_back') + '</a>' +
       '<button class="status-btn primary" type="button" onclick="window.__signOut()">' + window.__t('btn_retry') + '</button>';
     animate('#statusGlyph', {
       translateX: [{ to: -6, duration: 60 }, { to: 6, duration: 60 }, { to: -4, duration: 60 }, { to: 4, duration: 60 }, { to: 0, duration: 80 }],
